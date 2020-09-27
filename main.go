@@ -23,6 +23,7 @@ var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	flag.Parse()
 
 	if *httpsFlag {
 		server, e := https.Server("", https.GenerateOptions{Host: "localhost"})
