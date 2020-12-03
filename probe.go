@@ -13,6 +13,7 @@ import (
 	"github.com/usnistgov/ndn-dpdk/core/nnduration"
 	"github.com/usnistgov/ndn-dpdk/ndn"
 	"github.com/usnistgov/ndn-dpdk/ndn/an"
+	_ "github.com/usnistgov/ndn-dpdk/ndn/keychain" // recognize ValidityPeriod
 	"github.com/usnistgov/ndn-dpdk/ndn/l3"
 	"github.com/usnistgov/ndn-dpdk/ndn/sockettransport"
 )
