@@ -18,25 +18,32 @@ import (
 )
 
 type probeRequest struct {
-	Name      ndn.Name
-	AddSuffix bool
+	Name        ndn.Name
+	AddSuffix   bool
+	CanBePrefix bool
+	MustBeFresh bool
 }
 
 func probeRequestFromQuery(query url.Values) (req probeRequest) {
 	req.Name = ndn.ParseName(query.Get("name"))
 	req.AddSuffix = query.Get("suffix") != ""
+	req.CanBePrefix = query.Get("cbp") != ""
+	req.MustBeFresh = query.Get("mbf") != ""
 	return
 }
 
-func (req probeRequest) MakeInterest() ndn.Interest {
-	name := req.Name
+func (req probeRequest) MakeInterest() (interest ndn.Interest) {
 	if req.AddSuffix {
 		var suffix [8]byte
 		rand.Read(suffix[:])
-		name = append(ndn.Name{}, name...)
-		name = append(name, ndn.MakeNameComponent(an.TtSequenceNumNameComponent, suffix[:]))
+		interest.Name = append(ndn.Name{}, req.Name...)
+		interest.Name = append(interest.Name, ndn.MakeNameComponent(an.TtSequenceNumNameComponent, suffix[:]))
+	} else {
+		interest.Name = req.Name
 	}
-	return ndn.MakeInterest(name, ndn.CanBePrefixFlag, ndn.MustBeFreshFlag)
+	interest.CanBePrefix = req.CanBePrefix
+	interest.MustBeFresh = req.MustBeFresh
+	return
 }
 
 type probeResult struct {
