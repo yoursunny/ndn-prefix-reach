@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -13,9 +12,8 @@ import (
 	"github.com/usnistgov/ndn-dpdk/core/nnduration"
 	"github.com/usnistgov/ndn-dpdk/ndn"
 	"github.com/usnistgov/ndn-dpdk/ndn/an"
+	"github.com/usnistgov/ndn-dpdk/ndn/endpoint"
 	_ "github.com/usnistgov/ndn-dpdk/ndn/keychain" // recognize ValidityPeriod
-	"github.com/usnistgov/ndn-dpdk/ndn/l3"
-	"github.com/usnistgov/ndn-dpdk/ndn/sockettransport"
 )
 
 type probeRequest struct {
@@ -44,6 +42,7 @@ func (req probeRequest) MakeInterest() (interest ndn.Interest) {
 	}
 	interest.CanBePrefix = req.CanBePrefix
 	interest.MustBeFresh = req.MustBeFresh
+	interest.Lifetime = 3000 * time.Millisecond
 	return
 }
 
@@ -54,47 +53,23 @@ type probeResult struct {
 }
 
 func probe(ctx context.Context, ni nodeInfo, req probeRequest, res *probeResult) {
-	tr, e := sockettransport.Dial("udp", ":0", ni.Host+":6363")
+	fw, e := connect(ni)
 	if e != nil {
 		res.Error = e.Error()
 		return
 	}
-
-	face, e := l3.NewFace(tr)
-	if e != nil {
-		close(tr.Tx())
-		res.Error = e.Error()
-		return
-	}
-	defer close(face.Tx())
 
 	interest := req.MakeInterest()
 	t0 := time.Now()
-	face.Tx() <- interest
-	for {
-		select {
-		case <-ctx.Done():
-			e := ctx.Err()
-			if errors.Is(e, context.DeadlineExceeded) {
-				res.Error = "timeout"
-			} else {
-				res.Error = ctx.Err().Error()
-			}
-			return
-		case pkt := <-face.Rx():
-			switch {
-			case pkt.Data != nil && pkt.Data.CanSatisfy(interest):
-				t1 := time.Now()
-				res.OK = true
-				res.RTT = nnduration.Milliseconds(t1.Sub(t0).Milliseconds())
-				return
-			case pkt.Nack != nil && pkt.Nack.Interest.Name.Equal(interest.Name):
-				t1 := time.Now()
-				res.RTT = nnduration.Milliseconds(t1.Sub(t0).Milliseconds())
-				res.Error = "Nack " + an.NackReasonString(pkt.Nack.Reason)
-				return
-			}
-		}
+	_, e = endpoint.Consume(ctx, interest, endpoint.ConsumerOptions{
+		Fw: fw,
+	})
+	if e == nil {
+		t1 := time.Now()
+		res.OK = true
+		res.RTT = nnduration.Milliseconds(t1.Sub(t0).Milliseconds())
+	} else {
+		res.Error = e.Error()
 	}
 }
 
