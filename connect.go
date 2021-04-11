@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"sync"
 
 	"github.com/usnistgov/ndn-dpdk/ndn"
@@ -15,7 +16,7 @@ func connect(ni nodeInfo) (fw l3.Forwarder, e error) {
 		return stored.(l3.Forwarder), nil
 	}
 
-	tr, e := sockettransport.Dial("udp", ":0", ni.Host+":6363")
+	tr, e := sockettransport.Dial("udp", ":0", net.JoinHostPort(ni.Host, "6363"))
 	if e != nil {
 		return nil, e
 	}
