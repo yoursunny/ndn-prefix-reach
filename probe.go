@@ -43,6 +43,7 @@ func (req probeRequest) MakeInterest() (interest ndn.Interest) {
 	interest.CanBePrefix = req.CanBePrefix
 	interest.MustBeFresh = req.MustBeFresh
 	interest.Lifetime = 3000 * time.Millisecond
+	interest.HopLimit = 64
 	return
 }
 
