@@ -1,9 +1,9 @@
-FROM golang:1 AS build
-WORKDIR /go/src/app
+FROM golang:1.18 AS build
+WORKDIR /app
 COPY . .
-RUN env CGO_ENABLED=0 go build .
+RUN env CGO_ENABLED=0 GOBIN=/build go install .
 
 FROM scratch
-COPY --from=build /go/src/app/ndn-prefix-reach /ndn-prefix-reach
+COPY --from=build /build/* /
 EXPOSE 6774
 ENTRYPOINT ["/ndn-prefix-reach"]

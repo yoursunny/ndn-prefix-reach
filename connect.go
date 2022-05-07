@@ -16,14 +16,16 @@ func connect(ni nodeInfo) (fw l3.Forwarder, e error) {
 		return stored.(l3.Forwarder), nil
 	}
 
-	tr, e := sockettransport.Dial("udp", ":0", net.JoinHostPort(ni.Host, "6363"))
+	tr, e := sockettransport.Dial("udp", ":0", net.JoinHostPort(ni.Host, "6363"), sockettransport.Config{
+		MTU: 1280,
+	})
 	if e != nil {
 		return nil, e
 	}
 
-	l3face, e := l3.NewFace(tr)
+	l3face, e := l3.NewFace(tr, l3.FaceConfig{})
 	if e != nil {
-		close(tr.Tx())
+		tr.Close()
 		return nil, e
 	}
 

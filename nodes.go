@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -75,7 +75,7 @@ func updateNodeList() {
 		log.Println("updateNodeList GET", e)
 		return
 	}
-	body, e := ioutil.ReadAll(response.Body)
+	body, e := io.ReadAll(response.Body)
 	if e != nil {
 		log.Println("updateNodeList read", e)
 		return

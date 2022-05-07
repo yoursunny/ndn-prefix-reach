@@ -5,8 +5,10 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/gorilla/handlers"
 	"github.com/rocketlaunchr/https-go"
 )
 
@@ -15,15 +17,13 @@ var (
 	httpsFlag  = flag.Bool("https", false, "enable HTTPS with self-signed certificate")
 )
 
-var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.RemoteAddr, r.URL)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	http.DefaultServeMux.ServeHTTP(w, r)
-})
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	flag.Parse()
+
+	cors := handlers.CORS(handlers.AllowedOrigins([]string{"*"}))
+	handler := cors(http.DefaultServeMux)
+	handler = handlers.LoggingHandler(os.Stderr, handler)
 
 	if *httpsFlag {
 		server, e := https.Server("", https.GenerateOptions{Host: "localhost"})

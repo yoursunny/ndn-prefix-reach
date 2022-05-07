@@ -9,25 +9,28 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/schema"
 	"github.com/usnistgov/ndn-dpdk/core/nnduration"
 	"github.com/usnistgov/ndn-dpdk/ndn"
 	"github.com/usnistgov/ndn-dpdk/ndn/an"
 	"github.com/usnistgov/ndn-dpdk/ndn/endpoint"
 	_ "github.com/usnistgov/ndn-dpdk/ndn/keychain" // recognize ValidityPeriod
+	"golang.org/x/exp/slices"
 )
 
+var schemaDecoder = schema.NewDecoder()
+
 type probeRequest struct {
+	NameUri     string `schema:"name"`
 	Name        ndn.Name
-	AddSuffix   bool
-	CanBePrefix bool
-	MustBeFresh bool
+	AddSuffix   bool `schema:"suffix"`
+	CanBePrefix bool `schema:"cbp"`
+	MustBeFresh bool `schema:"mbf"`
 }
 
 func probeRequestFromQuery(query url.Values) (req probeRequest) {
-	req.Name = ndn.ParseName(query.Get("name"))
-	req.AddSuffix = query.Get("suffix") != ""
-	req.CanBePrefix = query.Get("cbp") != ""
-	req.MustBeFresh = query.Get("mbf") != ""
+	schemaDecoder.Decode(&req, query)
+	req.Name = ndn.ParseName(req.NameUri)
 	return
 }
 
@@ -35,8 +38,7 @@ func (req probeRequest) MakeInterest() (interest ndn.Interest) {
 	if req.AddSuffix {
 		var suffix [8]byte
 		rand.Read(suffix[:])
-		interest.Name = append(ndn.Name{}, req.Name...)
-		interest.Name = append(interest.Name, ndn.MakeNameComponent(an.TtSequenceNumNameComponent, suffix[:]))
+		interest.Name = append(slices.Clone(req.Name), ndn.MakeNameComponent(an.TtSequenceNumNameComponent, suffix[:]))
 	} else {
 		interest.Name = req.Name
 	}
@@ -85,14 +87,14 @@ func init() {
 		nodes := getNodeList()
 		var wg sync.WaitGroup
 		wg.Add(len(nodes))
-		results := make(map[string]*probeResult)
+		results := map[string]*probeResult{}
 		for _, ni := range nodes {
 			res := &probeResult{}
 			results[ni.ID] = res
 			go func(ni nodeInfo) {
+				defer wg.Done()
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 				probe(ctx, ni, req, res)
-				wg.Done()
 			}(ni)
 		}
 		wg.Wait()
