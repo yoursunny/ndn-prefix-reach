@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/rocketlaunchr/https-go"
@@ -18,7 +16,6 @@ var (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	flag.Parse()
 
 	cors := handlers.CORS(handlers.AllowedOrigins([]string{"*"}))

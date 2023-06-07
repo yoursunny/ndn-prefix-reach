@@ -15,17 +15,17 @@ import (
 	"github.com/usnistgov/ndn-dpdk/ndn/an"
 	"github.com/usnistgov/ndn-dpdk/ndn/endpoint"
 	_ "github.com/usnistgov/ndn-dpdk/ndn/keychain" // recognize ValidityPeriod
-	"golang.org/x/exp/slices"
+	"github.com/usnistgov/ndn-dpdk/ndn/tlv"
 )
 
 var schemaDecoder = schema.NewDecoder()
 
 type probeRequest struct {
-	NameUri     string `schema:"name"`
-	Name        ndn.Name
-	AddSuffix   bool `schema:"suffix"`
-	CanBePrefix bool `schema:"cbp"`
-	MustBeFresh bool `schema:"mbf"`
+	NameUri     string   `schema:"name"`
+	Name        ndn.Name `schema:"-"`
+	AddSuffix   bool     `schema:"suffix"`
+	CanBePrefix bool     `schema:"cbp"`
+	MustBeFresh bool     `schema:"mbf"`
 }
 
 func probeRequestFromQuery(query url.Values) (req probeRequest) {
@@ -36,9 +36,7 @@ func probeRequestFromQuery(query url.Values) (req probeRequest) {
 
 func (req probeRequest) MakeInterest() (interest ndn.Interest) {
 	if req.AddSuffix {
-		var suffix [8]byte
-		rand.Read(suffix[:])
-		interest.Name = append(slices.Clone(req.Name), ndn.MakeNameComponent(an.TtSequenceNumNameComponent, suffix[:]))
+		interest.Name = req.Name.Append(ndn.NameComponentFrom(an.TtSequenceNumNameComponent, tlv.NNI(rand.Uint64())))
 	} else {
 		interest.Name = req.Name
 	}
