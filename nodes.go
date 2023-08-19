@@ -9,16 +9,19 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var (
-	nodeList []nodeInfo
-	nodeLock sync.RWMutex
-
+	nodeList    atomic.Pointer[[]nodeInfo]
 	errPosition = errors.New("position missing")
 )
+
+func init() {
+	emptyNodeList := []nodeInfo{}
+	nodeList.Store(&emptyNodeList)
+}
 
 type nodeInfo struct {
 	ID         string     `json:"id"`
@@ -87,7 +90,7 @@ func updateNodeList() {
 		return
 	}
 
-	var newNodeList []nodeInfo
+	newNodeList := []nodeInfo{}
 	for _, ni := range nodeMap {
 		if ni.Host == "0.0.0.0" {
 			continue
@@ -95,15 +98,11 @@ func updateNodeList() {
 		newNodeList = append(newNodeList, ni)
 	}
 
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-	nodeList = newNodeList
+	nodeList.Store(&newNodeList)
 }
 
 func getNodeList() []nodeInfo {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-	return nodeList
+	return *nodeList.Load()
 }
 
 func init() {
