@@ -73,7 +73,7 @@ func (ni *nodeInfo) UnmarshalJSON(wire []byte) error {
 func updateNodeList() {
 	time.AfterFunc(time.Duration(600+rand.Intn(60))*time.Second, updateNodeList)
 
-	response, e := http.Get("https://wundngw.wustl.edu/ndnstatus/testbed-nodes.json")
+	response, e := http.Get("https://testbed-status.named-data.net/testbed-nodes.json")
 	if e != nil {
 		log.Println("updateNodeList GET", e)
 		return
